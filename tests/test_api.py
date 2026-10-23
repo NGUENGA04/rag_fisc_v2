@@ -45,3 +45,13 @@ def test_health():
 
 def test_bareme_route_validates_name():
     assert client.get("/bareme/tva?montant=100000").status_code == 422
+
+
+def test_health_flags_badly_copied_model_name(monkeypatch):
+    from rag_fisc_v2.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "analysis_model", "ANALYSIS_MODEL=")
+    body = client.get("/health").json()
+    assert body["modeles_valides"] is False
+    assert body["statut"] == "incomplet"
+    assert body["modeles"]["analyse"] == "ANALYSIS_MODEL="

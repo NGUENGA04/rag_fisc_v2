@@ -87,5 +87,7 @@ class HealthResponse(BaseModel):
     pinecone_configure: bool
     whatsapp_configure: bool
     stockage: str = Field(description="postgres, sqlite, ou erreur si la base est inaccessible")
+    modeles: dict[str, str] = Field(description="Modèles Mistral utilisés. Aucun secret.")
+    modeles_valides: bool = Field(description="Faux si un nom de modèle est vide ou mal saisi (ex. 'ANALYSIS_MODEL=')")
     documents_indexes: int
     baremes_disponibles: list[str]

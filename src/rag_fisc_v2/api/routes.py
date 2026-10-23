@@ -1,6 +1,7 @@
 """Routes HTTP de l'API."""
 
 import hmac
+import re
 from functools import lru_cache
 from typing import Literal
 
@@ -103,13 +104,25 @@ def health() -> HealthResponse:
     state = load_index_state()
     mistral = _configured(settings.mistral_api_key)
     pinecone = _configured(settings.pinecone_api_key)
+    modeles = {
+        "ocr": settings.ocr_model,
+        "embeddings": settings.embed_model,
+        "analyse": settings.analysis_model,
+        "generation": settings.generation_model,
+    }
+    # Un nom de modèle ne contient ni "=", ni espace : sinon la variable a été mal recopiée.
+    modeles_valides = all(re.fullmatch(r"[a-z0-9][a-z0-9.\-]*", m or "") for m in modeles.values())
     try:
         stockage = storage.backend_name()
     except Exception as exc:  # base injoignable : le signaler sans faire échouer la route
         stockage = f"erreur : {type(exc).__name__}"
     return HealthResponse(
-        statut="ok" if mistral and pinecone and state and not stockage.startswith("erreur") else "incomplet",
+        statut="ok"
+        if mistral and pinecone and state and modeles_valides and not stockage.startswith("erreur")
+        else "incomplet",
         stockage=stockage,
+        modeles=modeles,
+        modeles_valides=modeles_valides,
         mistral_configure=mistral,
         pinecone_configure=pinecone,
         whatsapp_configure=bool(
