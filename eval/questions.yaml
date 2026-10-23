@@ -16,6 +16,14 @@ questions:
       contient: ["2"]
     valide: false
 
+  - id: is-taux
+    question: Quel est le taux de l'impôt sur les sociétés ?
+    profil: grand_public
+    attendu:
+      articles: ["17", "17 bis"]
+      contient: ["30 %", "25 %"]
+    valide: false
+
   - id: is-personnes-imposables
     question: Quelles sont les personnes imposables à l'IS au Cameroun ?
     profil: grand_public

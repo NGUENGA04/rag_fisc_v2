@@ -1,15 +1,13 @@
 """Génération de la réponse finale avec Mistral Medium."""
 
-import re
 from dataclasses import dataclass
 
 from rag_fisc_v2.config import get_settings
 from rag_fisc_v2.domain import Canal, LlmUsage, Profil
+from rag_fisc_v2.generation.citations import find_citations, normalize_citations
 from rag_fisc_v2.generation.prompts import system_prompt, user_prompt
 from rag_fisc_v2.ingestion.baremes import BaremeResult
 from rag_fisc_v2.retrieval.retriever import Passage
-
-_CITATION = re.compile(r"\[(S\d+|B)\]")
 
 
 @dataclass
@@ -65,6 +63,5 @@ def generate_answer(
     content = response.choices[0].message.content
     if isinstance(content, list):  # certains modèles renvoient des blocs
         content = "".join(getattr(c, "text", "") for c in content)
-    text = (content or "").strip()
-    cited = list(dict.fromkeys(_CITATION.findall(text)))
-    return Generation(text=text, cited=cited), refs
+    text = normalize_citations((content or "").strip())
+    return Generation(text=text, cited=find_citations(text)), refs

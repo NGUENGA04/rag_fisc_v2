@@ -44,7 +44,7 @@ Le fichier `data/manifest.yaml` décrit chaque document. Les PDF sont dans `data
 | Orchestration | LlamaIndex | Nœuds, sérialisation, vector store Pinecone, requêtes |
 | Analyse de la question | Mistral Small | Sortie structurée (Pydantic), avec repli sur des règles |
 | Génération | Mistral Medium | Réponse sourcée selon le profil |
-| Reranking | `bge-reranker-v2-m3` hébergé par Pinecone, puis Mistral Small | Bascule automatique, voir la section 5.4 |
+| Reranking | Mistral Small, par défaut | Choisi après comparaison avec `bge-reranker-v2-m3`, voir la section 5.4 |
 | Barèmes | pdfplumber | Extraction exacte des tableaux, sans OCR |
 | API et CLI | FastAPI, Typer | Python 3.13, `uv` |
 | Canal WhatsApp | API WhatsApp Cloud de Meta, appelée avec httpx | Guide de mise en service : [WHATSAPP.md](WHATSAPP.md) |
@@ -100,7 +100,8 @@ data/raw/*.pdf + data/manifest.yaml
 
 | Type | Unité | Métadonnées propres |
 |---|---|---|
-| CGI | Article, avec la hiérarchie Livre > Titre > Chapitre > Section | `article` |
+| CGI, corps du Code | Article, avec la hiérarchie Livre > Titre > Sous-titre > Chapitre > Section. Les suites d'un article long reprennent ses sous-titres internes (« Article 7 (suite) — A - Frais généraux > 1- Rémunérations »). | `article` |
+| CGI, annexes | Textes reproduits : lois, ordonnances, décrets, arrêtés, décisions, circulaires. Plan propre à chaque texte, sous « ANNEXES DU CGI > PARTIE LEGISLATIVE » ou « PARTIE REGLEMENTAIRE ». | aucun `article` : leurs articles ne sont pas ceux du CGI |
 | LFI | Article de la loi (« ARTICLE HUITIÈME »). Chaque article du CGI recopié dans la loi ouvre un sous-morceau. | `article` (numéro dans la loi), `articles_cites` (article du CGI modifié en premier) |
 | Circulaire, fiche | Titres du plan (« I- », « A- », titres Markdown), puis regroupement des petites sections | `articles_cites` |
 | Arrêté | Article | `article`, `articles_cites` |
@@ -149,11 +150,13 @@ Question + profil (+ exercice)
  2. Recherche, pour chaque exercice visé :
     a. articles du CGI cités dans la question (recherche exacte)
     b. passages de LFI, circulaire ou arrêté qui citent ces articles
-    c. recherche sémantique filtrée par exercice
+    c. recherche sémantique filtrée par exercice (30 passages)
     d. commentaires liés aux articles du CGI les mieux classés
+    e. famille des articles trouvés : 17 -> 17 bis, 17 ter, 17 quater...
+    Les requêtes indépendantes partent en parallèle.
         │
         ▼
- 3. Reranking multilingue, seuil minimal, articles demandés toujours conservés
+ 3. Reranking par Mistral Small, seuil minimal, articles demandés toujours conservés et placés en tête
         │
         ▼
  4. Génération (Mistral Medium) : sources numérotées [S1], [S2], barème [B]
@@ -185,16 +188,26 @@ Question + profil (+ exercice)
 | `expert` | Technique, articles et alinéas précis, conditions, exceptions, entrée en vigueur |
 | `grand_public` | Réponse en deux phrases d'abord, sigles expliqués, exemple chiffré, 250 mots maximum, avertissement |
 
-### 5.4 Reranking et quota Pinecone
+### 5.4 Reranking
 
-L'offre gratuite de Pinecone inclut 500 reranks par mois, ce qu'un canal WhatsApp peut épuiser en quelques jours.
-Le mode `auto` compte les appels du mois en base :
+**Mistral Small est le reranker par défaut.** Il note chaque passage de 0 à 10. Le choix vient d'une
+comparaison sur le corpus réel, pour la question « Quel est le taux de l'impôt sur les sociétés ? » :
 
-1. Pinecone `bge-reranker-v2-m3` tant que le compteur est sous `PINECONE_RERANK_MONTHLY_BUDGET` (450 par défaut).
-2. Ensuite, ou si Pinecone renvoie une erreur, Mistral Small note chaque passage de 0 à 10.
-3. Si les deux échouent, l'ordre de la recherche vectorielle est conservé.
+| Reranker | Position de l'article 17 du CGI | Durée |
+|---|---|---|
+| `bge-reranker-v2-m3` (Pinecone) | 20e sur 26 | 1 à 2 s |
+| Mistral Small | 2e sur 26 | 2,6 s |
 
-Le reranker utilisé est enregistré pour chaque question.
+Le reranker de Pinecone sous-estime les articles courts dont le sujet n'apparaît que dans le plan.
+Mistral Small coûte environ 0,1 à 0,2 centime par question et n'a pas de quota mensuel.
+
+`RERANK_PROVIDER` permet de changer de reranker : `mistral`, `pinecone`, `auto` (Pinecone jusqu'au
+budget mensuel, puis Mistral) ou `none`. Si le reranker échoue, l'ordre de la recherche vectorielle
+est conservé. Le reranker utilisé est enregistré pour chaque question.
+
+**Famille d'articles.** L'article 17 bis du CGI, qui fixe le taux réduit de 25 %, n'apparaissait pas dans
+les 30 premiers résultats de la recherche sémantique pour cette même question. Les articles bis, ter,
+quater complètent ou dérogent à l'article de base : ils sont désormais récupérés ensemble.
 
 ### 5.5 Mémoire de conversation
 
@@ -323,19 +336,20 @@ tests/                 tests sans appel réseau
 | Étape | État |
 |---|---|
 | Configuration, manifeste, structure | Fait |
-| Barèmes extraits et testés | Fait |
-| Découpage et détection des articles | Fait, testé sur extraits et sur l'arrêté et la fiche IS |
-| OCR, indexation, recherche, génération, API | Écrit et testé hors ligne, à exécuter avec les clés |
-| Canal WhatsApp, mémoire, quotas, suivi d'usage, Docker | Écrit et testé hors ligne, à brancher sur un compte Meta |
-| Relecture de l'OCR du CGI et réglage du découpage | À faire après le premier OCR |
-| Jeu d'évaluation de 30 questions validées | 12 questions amorcées, à compléter |
+| Barèmes extraits et testés | Fait : 12 276 lignes IRPP, 12 540 lignes TDL |
+| OCR du corpus | Fait : 1 637 pages, OCR 4.1, environ 6,50 $ |
+| Découpage | Fait et vérifié sur le vrai CGI : 961 articles, annexes séparées |
+| Indexation Pinecone | Fait : 3 714 vecteurs, index `rag-fisc-cm` |
+| Recherche, reranking, génération | Fait et testé de bout en bout |
+| Évaluation | 13 questions, 20 contrôles sur 20 réussis au dernier passage. Jeu à valider par un fiscaliste et à porter à 30 questions. |
+| Base Neon, Pinecone, WhatsApp | Configurés et vérifiés en local |
+| Déploiement Vercel, webhook Meta | À faire |
 
 ## 11. Points ouverts
 
-- Clés Mistral et Pinecone à fournir dans `.env`.
-- Compte Meta et application WhatsApp à créer, voir [WHATSAPP.md](WHATSAPP.md).
-- Phase de test sur Vercel avec Neon. Hébergeur définitif à choisir ensuite.
+- Déployer sur Vercel et brancher le webhook chez Meta, voir [VERCEL.md](VERCEL.md) et [WHATSAPP.md](WHATSAPP.md).
+- Régénérer avant l'ouverture au public les secrets communiqués pendant la mise en place : mot de passe Neon, clés Pinecone et Mistral, jeton WhatsApp, clé secrète Meta.
 - CGI 2024 et 2025 absents : à ajouter si disponibles pour un historique complet.
 - Exercice d'application des barèmes IRPP et TDL à confirmer.
-- Date de la fiche IS à confirmer.
-- Identifiants exacts de Small 4 et Medium 3.5 à reporter dans `.env` si l'on veut figer les versions.
+- Date de la fiche IS à confirmer : sur le taux de l'IS, elle est cohérente avec les articles 17 et 17 bis du CGI 2026.
+- Latence : environ 20 s depuis un PC au Cameroun, dont 12 s de recherche. À mesurer depuis Vercel (Francfort).

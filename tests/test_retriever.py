@@ -119,3 +119,20 @@ def test_requested_article_first_and_scores_not_mixed():
     ids = [p.node_id for p in result.passages]
     assert ids[0] == "cgi-2026#1"  # article demandé, réinséré et placé en tête
     assert ids[1] == "circ-2026#1"
+
+
+def test_article_family():
+    from rag_fisc_v2.retrieval.retriever import article_family
+
+    fam = article_family(["17", "17 quater", "L106"])
+    assert fam[:3] == ["17", "17 bis", "17 ter"]
+    assert "17 quater" in fam and "L106 bis" in fam
+    assert fam.count("17") == 1
+
+
+def test_family_query_is_issued_for_top_cgi_articles():
+    store = FakeVectorStore()
+    r = FiscalRetriever(MANIFEST, vector_store=store, embed_model=FakeEmbed(), reranker=FakeReranker())
+    r.retrieve(QueryAnalysis(question_reformulee="taux IS", intention="information"))
+    family_filters = [f for f in store.filters if "article" in f and "doc_id" in f]
+    assert family_filters and "17 bis" in family_filters[0]["article"]["$in"]

@@ -1,28 +1,28 @@
 {
   "cgi-2026": {
-    "fingerprint": "1f4f3f1ca4635ff975f1739416358202daa55f629bc17f461d14046ff01e7954",
-    "chunks": 2309,
-    "indexed_at": "2026-10-23T14:31:32+00:00"
+    "fingerprint": "a0b258673608c93a3a120aad0c72a42363fa09ee2c0e68e0dfd8d02226c9b597",
+    "chunks": 2315,
+    "indexed_at": "2026-10-23T14:38:09+00:00"
   },
   "lfi-2024": {
-    "fingerprint": "128b49c4d69c908dff37d8f133e6ed618a4ce25915bb6ede4a7bd489eafd1006",
-    "chunks": 238,
-    "indexed_at": "2026-10-23T14:20:27+00:00"
+    "fingerprint": "3c9e06b375ac7a384e2c10191d7d8cc55f251125e90ce43cef21dc68af7d9db3",
+    "chunks": 239,
+    "indexed_at": "2026-10-23T14:39:01+00:00"
   },
   "lfi-2025": {
-    "fingerprint": "29ca8980e0bfc475083f97eed1765cc0f45d3e8c02be803987d24d4378224c86",
-    "chunks": 183,
-    "indexed_at": "2026-10-23T14:20:52+00:00"
+    "fingerprint": "6dd00d610fe1478e6995c6004b9045b57a26902a2f2ac3b872851221a1673fe3",
+    "chunks": 184,
+    "indexed_at": "2026-10-23T14:39:38+00:00"
   },
   "lfi-2026": {
-    "fingerprint": "3324913ba72077a5fb0dc447b58fb00388fe4c2cc7aec0b9c0a480ad23007a83",
-    "chunks": 325,
-    "indexed_at": "2026-10-23T14:21:27+00:00"
+    "fingerprint": "1c5f66882490b7b813b5423dea567ee8e525d2e9b7532b7fe3470f25e2d41204",
+    "chunks": 328,
+    "indexed_at": "2026-10-23T14:41:27+00:00"
   },
   "circulaire-2024": {
-    "fingerprint": "f6f4991f7710aa33644dfb9e4274d43d102ead1b15e901427213b714aa7bbe44",
+    "fingerprint": "0acd181045a95c7055faf3756a7e501bd3c5b52550d6b692e1fbaf16bcca01bf",
     "chunks": 128,
-    "indexed_at": "2026-10-23T14:21:43+00:00"
+    "indexed_at": "2026-10-23T14:42:02+00:00"
   },
   "circulaire-2025": {
     "fingerprint": "3f3a57a9982e4bec5bfc45386e694d5666667ab98f69d7a68fabe8246475abef",

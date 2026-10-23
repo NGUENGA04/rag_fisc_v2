@@ -23,13 +23,13 @@ class Settings(BaseSettings):
     pinecone_api_key: SecretStr | None = None
 
     # --- Modèles Mistral ----------------------------------------------------
-    # Les alias "-latest" suivent la dernière version. Pour figer une version
-    # (par exemple Small 4 ou Medium 3.5), mettre son identifiant exact dans .env.
-    ocr_model: str = "mistral-ocr-latest"
+    # Versions figées, vérifiées sur le compte Mistral le 23 octobre 2026.
+    # Pour en changer, définir OCR_MODEL, ANALYSIS_MODEL ou GENERATION_MODEL dans .env.
+    ocr_model: str = "mistral-ocr-4-1"  # OCR 4.1
     embed_model: str = "mistral-embed"
     embed_dimension: int = 1024
-    analysis_model: str = "mistral-small-latest"
-    generation_model: str = "mistral-medium-latest"
+    analysis_model: str = "mistral-small-2603"  # Small 4
+    generation_model: str = "mistral-medium-2604"  # Medium 3.5
     generation_max_tokens: int = 2000
 
     # --- Pinecone -----------------------------------------------------------
@@ -54,13 +54,16 @@ class Settings(BaseSettings):
     embed_batch_size: int = 32
 
     # --- Recherche ----------------------------------------------------------
-    top_k_dense: int = 20
+    top_k_dense: int = 30
     top_k_article: int = 8
     top_k_linked: int = 8
+    top_k_family: int = 8
     rerank_top_n: int = 8
     rerank_min_score: float = 0.02
+    # mistral : Mistral Small note chaque passage. Retenu par défaut après comparaison sur le
+    # corpus : bge-reranker-v2-m3 classait l'article 17 (taux de l'IS) 20e sur 26, Mistral Small 2e.
     # auto : Pinecone tant que le budget mensuel n'est pas atteint, puis Mistral Small.
-    rerank_provider: Literal["auto", "pinecone", "mistral", "none"] = "auto"
+    rerank_provider: Literal["auto", "pinecone", "mistral", "none"] = "mistral"
     # L'offre gratuite de Pinecone inclut 500 reranks par mois : on garde une marge.
     pinecone_rerank_monthly_budget: int = 450
     mistral_rerank_min_score: float = 0.3

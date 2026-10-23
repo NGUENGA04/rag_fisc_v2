@@ -105,7 +105,9 @@ class RagService:
     def _answer(
         self, request: AskRequest, canal: Canal, history: list, usage: LlmUsage
     ) -> tuple[AskResponse, QueryAnalysis, str]:
+        t0 = time.monotonic()
         analysis = analyze_question(request.question, history=history, usage=usage)
+        t_analysis = time.monotonic() - t0
         if request.exercice:
             analysis.exercices = [request.exercice]
         debug = analysis.model_dump() if request.debug else None
@@ -125,7 +127,9 @@ class RagService:
         if bareme is not None and bareme.exercice is None:
             warnings.append(BAREME_YEAR_WARNING)
 
+        t0 = time.monotonic()
         retrieval = self.retriever.retrieve(analysis)
+        t_retrieval = time.monotonic() - t0
         warnings = retrieval.avertissements + warnings
 
         if not retrieval.passages and bareme is None:
@@ -142,6 +146,7 @@ class RagService:
                 retrieval.reranker,
             )
 
+        t0 = time.monotonic()
         generation, refs = generate_answer(
             question=request.question,
             profil=request.profil,
@@ -158,6 +163,10 @@ class RagService:
         order = {ref: i for i, ref in enumerate(generation.cited)}
         sources.sort(key=lambda s: (not s.citee, order.get(s.ref, 0)))
 
+        log.info(
+            "Durées : analyse %.1fs, recherche et reranking %.1fs (%s), génération %.1fs",
+            t_analysis, t_retrieval, retrieval.reranker, time.monotonic() - t0,
+        )
         response = AskResponse(
             reponse=generation.text,
             profil=request.profil,

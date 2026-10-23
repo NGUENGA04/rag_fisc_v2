@@ -9,6 +9,7 @@ Pour chaque exercice visé :
 """
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from llama_index.core.schema import TextNode
@@ -17,11 +18,30 @@ from llama_index.core.vector_stores.types import VectorStoreQuery
 from rag_fisc_v2.config import get_settings
 from rag_fisc_v2.domain import DOC_TYPE_AUTHORITY, EXERCICE_NON_DATE, DocType
 from rag_fisc_v2.ingestion.manifest import Manifest
+from rag_fisc_v2.ingestion.references import LATIN_SUFFIXES
 from rag_fisc_v2.retrieval.analysis import QueryAnalysis
 
 log = logging.getLogger(__name__)
 
 LINKED_TYPES = [DocType.LFI.value, DocType.CIRCULAIRE.value, DocType.ARRETE.value]
+
+# Borne de sécurité sur la taille du filtre $in (6 articles x 11 variantes = 66 au plus).
+_MAX_FAMILY = 120
+
+
+def article_family(articles: list[str]) -> list[str]:
+    """Articles de base et variantes : "17" ou "17 quater" -> 17, 17 bis, 17 ter, ... 17 decies.
+
+    Dans le CGI, un article "bis" ou "ter" complète l'article de base ou y déroge :
+    il faut les lire ensemble.
+    """
+    family: list[str] = []
+    for article in articles:
+        base = article.split(" ", 1)[0]
+        for variant in [base, *(f"{base} {s}" for s in LATIN_SUFFIXES)]:
+            if variant not in family:
+                family.append(variant)
+    return family[:_MAX_FAMILY]
 
 
 @dataclass
@@ -158,40 +178,56 @@ class FiscalRetriever:
     def retrieve_for_year(self, analysis: QueryAnalysis, vector: list[float], year: int) -> tuple[list[Passage], str | None]:
         s = self.settings
         flt, cgi_id, warning = self.year_filter(year)
-        found: list[Passage] = []
 
+        # Requêtes indépendantes : lancées en parallèle pour réduire la latence.
+        queries: dict[str, tuple] = {"dense": (s.top_k_dense, flt, "dense")}
         if analysis.articles and cgi_id:
-            found += self._query(
-                vector, s.top_k_article, {"doc_id": cgi_id, "article": {"$in": analysis.articles}}, "article", year
-            )
-            found += self._query(
-                vector,
+            queries["article"] = (s.top_k_article, {"doc_id": cgi_id, "article": {"$in": analysis.articles}}, "article")
+            queries["lien"] = (
                 s.top_k_linked,
                 {"exercice": year, "type": {"$in": LINKED_TYPES}, "articles_cites": {"$in": analysis.articles}},
                 "lien",
-                year,
             )
-
         if analysis.intention == "nouveautes":
-            found += self._query(vector, s.top_k_dense, {"exercice": year, "type": {"$in": LINKED_TYPES}}, "dense", year)
+            queries["nouveautes"] = (s.top_k_dense, {"exercice": year, "type": {"$in": LINKED_TYPES}}, "dense")
 
-        dense = self._query(vector, s.top_k_dense, flt, "dense", year)
+        with ThreadPoolExecutor(max_workers=len(queries)) as pool:
+            futures = {
+                name: pool.submit(self._query, vector, top_k, query_filter, origin, year)
+                for name, (top_k, query_filter, origin) in queries.items()
+            }
+            results = {name: future.result() for name, future in futures.items()}
+
+        dense = results["dense"]
+        found: list[Passage] = [p for name in ("article", "lien", "nouveautes") for p in results.get(name, [])]
         found += dense
 
-        # Articles du CGI parmi les meilleurs résultats : on remonte leurs commentaires.
+        # Articles du CGI parmi les meilleurs résultats : on remonte leurs commentaires
+        # (lois de finances, circulaires) et leur famille (17 -> 17 bis, 17 ter...).
         top_articles = []
         for p in dense[:6]:
             if p.doc_type == DocType.CGI and p.article and p.article not in top_articles:
                 top_articles.append(p.article)
         new_links = [a for a in top_articles if a not in analysis.articles]
+        family = article_family(top_articles + analysis.articles)
+
+        follow_up: dict[str, tuple] = {}
         if new_links:
-            found += self._query(
-                vector,
+            follow_up["lien"] = (
                 s.top_k_linked,
                 {"exercice": year, "type": {"$in": LINKED_TYPES}, "articles_cites": {"$in": new_links}},
                 "lien",
-                year,
             )
+        if family and cgi_id:
+            follow_up["famille"] = (s.top_k_family, {"doc_id": cgi_id, "article": {"$in": family}}, "famille")
+        if follow_up:
+            with ThreadPoolExecutor(max_workers=len(follow_up)) as pool:
+                futures = [
+                    pool.submit(self._query, vector, top_k, query_filter, origin, year)
+                    for top_k, query_filter, origin in follow_up.values()
+                ]
+                for future in futures:
+                    found += future.result()
         return found, warning
 
     @staticmethod
