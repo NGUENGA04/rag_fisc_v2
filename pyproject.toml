@@ -1,0 +1,52 @@
+[project]
+name = "rag-fisc-v2"
+version = "0.1.0"
+description = "RAG fiscal Cameroun : CGI, lois de finances et circulaires, avec Mistral, LlamaIndex et Pinecone"
+readme = "README.md"
+authors = [
+    { name = "JACKSON NGUENGA", email = "jnguenga@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.143.0",
+    "httpx>=0.28.1",
+    "llama-index-core>=0.14.25",
+    "llama-index-embeddings-mistralai>=0.6.0",
+    "llama-index-vector-stores-pinecone>=0.9.0",
+    "mistralai>=3.2.0",
+    "pdfplumber>=0.11.10",
+    "pinecone>=9.1.0",
+    "psycopg[binary]>=3.3.6",
+    "pydantic-settings>=2.16.0",
+    "pypdf>=6.20.1",
+    "pyyaml>=6.0.3",
+    "typer>=0.27.3",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+rag-fisc-v2 = "rag_fisc_v2.cli:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP", "I"]
+# B008 : Depends() et Query() en valeur par défaut sont l'idiome de FastAPI.
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E501"]
+
+[build-system]
+requires = ["uv_build>=0.12.13,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

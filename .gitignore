@@ -1,0 +1,23 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets
+.env
+
+# Données : PDF sources et caches exclus.
+# Le manifeste, les barèmes extraits et index_state.json restent versionnés : le déploiement en a besoin.
+data/raw/
+data/ocr/
+data/chunks/
+data/app.db*
+
+# Outils
+.pytest_cache/

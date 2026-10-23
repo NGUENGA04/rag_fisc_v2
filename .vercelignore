@@ -1,0 +1,11 @@
+# Fichiers jamais envoyés à Vercel lors d'un déploiement par la CLI.
+.venv
+.env
+.env.*
+!.env.example
+**/__pycache__
+.pytest_cache
+data/raw
+data/ocr
+data/chunks
+data/app.db*

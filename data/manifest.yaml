@@ -1,0 +1,87 @@
+# Inventaire du corpus. Un bloc par document.
+#
+# doc_id     : identifiant stable, préfixe des vecteurs dans Pinecone. Ne pas le changer.
+# fichier    : nom du PDF dans data/raw/
+# type       : cgi | lfi | circulaire | arrete | fiche | bareme
+# exercice   : exercice fiscal couvert, ou null si le document n'est pas daté
+# titre      : libellé affiché dans les citations
+# reference  : référence officielle, facultative
+# ocr        : false pour ne pas passer le document à l'OCR (barèmes extraits en table)
+# indexer    : false pour exclure le document de Pinecone
+
+documents:
+  - doc_id: cgi-2026
+    fichier: CODE GENERAL DES IMPOTS 2026 VERSION FRANCAISE.pdf
+    type: cgi
+    exercice: 2026
+    titre: Code Général des Impôts, édition 2026
+    reference: Édition officielle DGI, mise à jour au 1er janvier 2026
+
+  - doc_id: lfi-2024
+    fichier: lfi2024.pdf
+    type: lfi
+    exercice: 2024
+    titre: Loi de finances pour l'exercice 2024
+    reference: Loi n° 2023/019 du 19 décembre 2023
+
+  - doc_id: lfi-2025
+    fichier: lfi2025.pdf
+    type: lfi
+    exercice: 2025
+    titre: Loi de finances pour l'exercice 2025
+
+  - doc_id: lfi-2026
+    fichier: lfi-2026.pdf
+    type: lfi
+    exercice: 2026
+    titre: Loi de finances pour l'exercice 2026
+    reference: Loi n° 2025/012 du 17 décembre 2025
+
+  - doc_id: circulaire-2024
+    fichier: Circulaire LF 2024.pdf
+    type: circulaire
+    exercice: 2024
+    titre: Circulaire d'application de la loi de finances 2024
+
+  - doc_id: circulaire-2025
+    fichier: CIRCULAIRE LF2025..pdf
+    type: circulaire
+    exercice: 2025
+    titre: Circulaire d'application de la loi de finances 2025
+
+  - doc_id: circulaire-2026
+    fichier: circulaire lf 2026 VF (1)-compressé.pdf
+    type: circulaire
+    exercice: 2026
+    titre: Circulaire d'application de la loi de finances 2026
+
+  - doc_id: arrete-retenue-source-2026
+    fichier: arrêté RTS 2026 VF.pdf
+    type: arrete
+    exercice: 2026
+    titre: Arrêté fixant la liste des entités tenues d'opérer la retenue à la source de la TVA et de l'AIR, exercice 2026
+    reference: Arrêté n° 00001/MINFI/DGI du 05 janvier 2026
+
+  - doc_id: fiche-is
+    fichier: is.pdf
+    type: fiche
+    exercice: null
+    titre: "Fiche technique DGI : l'Impôt sur les Sociétés (IS)"
+
+  # Barèmes : extraits en tables exactes pour l'outil de calcul, pas vectorisés.
+  # Exercice à confirmer : le document ne l'indique pas.
+  - doc_id: bareme-irpp
+    fichier: BAREME IRPP_DSSI final.pdf
+    type: bareme
+    exercice: null
+    titre: Barème mensuel IRPP, CAC, CCF, FNE et CRTV (DSSI)
+    ocr: false
+    indexer: false
+
+  - doc_id: bareme-tdl
+    fichier: BAREME TDL_DSSI final.pdf
+    type: bareme
+    exercice: null
+    titre: Barème mensuel de la Taxe de Développement Local (DSSI)
+    ocr: false
+    indexer: false

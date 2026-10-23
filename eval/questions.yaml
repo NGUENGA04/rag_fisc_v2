@@ -1,0 +1,102 @@
+# Jeu d'évaluation. À enrichir jusqu'à une trentaine de questions, validées par un fiscaliste.
+#
+# attendu.articles   : au moins un de ces articles du CGI doit figurer dans les passages retrouvés
+#                      (champ article ou articles_cites)
+# attendu.doc_ids    : au moins un passage doit venir d'un de ces documents
+# attendu.intention  : intention attendue de l'analyse de la question
+# attendu.contient   : textes qui doivent apparaître dans la réponse générée (avec --generate)
+# valide             : true quand un expert a confirmé la réponse attendue
+
+questions:
+  - id: is-acomptes
+    question: Comment sont calculés les acomptes mensuels d'impôt sur les sociétés ?
+    profil: expert
+    attendu:
+      articles: ["21"]
+      contient: ["2"]
+    valide: false
+
+  - id: is-personnes-imposables
+    question: Quelles sont les personnes imposables à l'IS au Cameroun ?
+    profil: grand_public
+    attendu:
+      articles: ["3", "4"]
+    valide: false
+
+  - id: is-base
+    question: Quelle est la base d'imposition de l'impôt sur les sociétés ?
+    profil: expert
+    attendu:
+      articles: ["6"]
+    valide: false
+
+  - id: penalites-retard
+    question: Quelles sont les pénalités en cas de paiement en retard de l'impôt ?
+    profil: grand_public
+    attendu:
+      articles: ["L106"]
+      contient: ["1,5"]
+    valide: false
+
+  - id: is-delai-solde
+    question: Avant quelle date une grande entreprise doit-elle payer le solde de son IS ?
+    profil: grand_public
+    attendu:
+      contient: ["15 mars"]
+    valide: false
+
+  - id: article-explicite
+    question: Que prévoit l'article 92 bis du CGI ?
+    profil: expert
+    attendu:
+      articles: ["92 bis"]
+      doc_ids: ["cgi-2026"]
+    valide: false
+
+  - id: retenue-source-2026
+    question: Quelles entreprises doivent opérer la retenue à la source de la TVA en 2026 ?
+    profil: expert
+    exercice: 2026
+    attendu:
+      doc_ids: ["arrete-retenue-source-2026"]
+      articles: ["92 bis", "143", "149"]
+    valide: false
+
+  - id: services-numeriques
+    question: Les entreprises étrangères de services numériques sont-elles imposables au Cameroun ?
+    profil: grand_public
+    attendu:
+      doc_ids: ["cgi-2026"]
+      contient: ["50 000 000"]
+    valide: false
+
+  - id: nouveautes-2025
+    question: Quelles sont les principales nouveautés fiscales de la loi de finances 2025 ?
+    profil: expert
+    attendu:
+      intention: nouveautes
+      doc_ids: ["lfi-2025", "circulaire-2025"]
+    valide: false
+
+  - id: bareme-irpp-350k
+    question: Combien d'IRPP est retenu sur un salaire mensuel de 350 000 FCFA ?
+    profil: grand_public
+    attendu:
+      intention: calcul_bareme
+      contient: ["19 962"]
+    valide: true
+
+  - id: bareme-tdl-1m
+    question: Quel est le montant de la TDL pour un salaire de base de 1 000 000 FCFA par mois ?
+    profil: grand_public
+    attendu:
+      intention: calcul_bareme
+      contient: ["2 500"]
+    valide: true
+
+  - id: hors-sujet
+    question: Quelle est la meilleure recette de ndolé ?
+    profil: grand_public
+    attendu:
+      intention: hors_sujet
+    valide: true

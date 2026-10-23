@@ -1,0 +1,47 @@
+{
+  "cgi-2026": {
+    "fingerprint": "1f4f3f1ca4635ff975f1739416358202daa55f629bc17f461d14046ff01e7954",
+    "chunks": 2309,
+    "indexed_at": "2026-10-23T14:31:32+00:00"
+  },
+  "lfi-2024": {
+    "fingerprint": "128b49c4d69c908dff37d8f133e6ed618a4ce25915bb6ede4a7bd489eafd1006",
+    "chunks": 238,
+    "indexed_at": "2026-10-23T14:20:27+00:00"
+  },
+  "lfi-2025": {
+    "fingerprint": "29ca8980e0bfc475083f97eed1765cc0f45d3e8c02be803987d24d4378224c86",
+    "chunks": 183,
+    "indexed_at": "2026-10-23T14:20:52+00:00"
+  },
+  "lfi-2026": {
+    "fingerprint": "3324913ba72077a5fb0dc447b58fb00388fe4c2cc7aec0b9c0a480ad23007a83",
+    "chunks": 325,
+    "indexed_at": "2026-10-23T14:21:27+00:00"
+  },
+  "circulaire-2024": {
+    "fingerprint": "f6f4991f7710aa33644dfb9e4274d43d102ead1b15e901427213b714aa7bbe44",
+    "chunks": 128,
+    "indexed_at": "2026-10-23T14:21:43+00:00"
+  },
+  "circulaire-2025": {
+    "fingerprint": "3f3a57a9982e4bec5bfc45386e694d5666667ab98f69d7a68fabe8246475abef",
+    "chunks": 191,
+    "indexed_at": "2026-10-23T14:22:10+00:00"
+  },
+  "circulaire-2026": {
+    "fingerprint": "85f5657e2e4cbed64b62612aaed3f9b482a146c87121e71dc37e41ede2f87b56",
+    "chunks": 303,
+    "indexed_at": "2026-10-23T14:22:51+00:00"
+  },
+  "arrete-retenue-source-2026": {
+    "fingerprint": "04049b935518c291d1847ab7c2d87077c931066f01bb603881818d7b0ec9f133",
+    "chunks": 17,
+    "indexed_at": "2026-10-23T14:23:05+00:00"
+  },
+  "fiche-is": {
+    "fingerprint": "7e0435c28ef01d141c3ed2583e6345aad21f44c37b59cdbb75b609339f676a1f",
+    "chunks": 9,
+    "indexed_at": "2026-10-23T14:23:09+00:00"
+  }
+}
