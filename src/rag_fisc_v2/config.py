@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     whatsapp_app_secret: SecretStr | None = None
     whatsapp_verify_token: SecretStr | None = None
     whatsapp_graph_version: str = "v23.0"
-    whatsapp_daily_limit_per_user: int = 30
+    whatsapp_daily_limit_per_user: int = 50
     whatsapp_max_message_chars: int = 3500
     # Traitement du message dans la requête du webhook plutôt qu'en arrière-plan.
     # Indispensable en serverless (Vercel), où rien ne garantit l'exécution après la réponse.
