@@ -226,6 +226,29 @@ def add_turn(user_hash: str, question: str, answer: str, question_reformulee: st
         "INSERT INTO turns(user_hash, created_at, question, question_reformulee, answer) VALUES (?, ?, ?, ?, ?)",
         (user_hash, time.time(), question, question_reformulee, answer),
     )
+    if random.random() < 0.05:
+        purge_old_turns()
+
+
+# Les échanges ne servent qu'à la mémoire de conversation (2 heures) : effacés après 24 heures.
+TURNS_RETENTION_SECONDS = 24 * 3600
+
+
+def purge_old_turns() -> int:
+    return _run("DELETE FROM turns WHERE created_at < ?", (time.time() - TURNS_RETENTION_SECONDS,))
+
+
+def delete_user_data(user_hash: str) -> int:
+    """Efface tout ce qui concerne un utilisateur : historique, préférences, questions, compteurs."""
+    deleted = 0
+    for sql in (
+        "DELETE FROM turns WHERE user_hash = ?",
+        "DELETE FROM user_prefs WHERE user_hash = ?",
+        "DELETE FROM interactions WHERE user_hash = ?",
+    ):
+        deleted += _run(sql, (user_hash,))
+    deleted += _run("DELETE FROM counters WHERE name LIKE ?", (f"%{user_hash}",))
+    return deleted
 
 
 def clear_history(user_hash: str) -> None:

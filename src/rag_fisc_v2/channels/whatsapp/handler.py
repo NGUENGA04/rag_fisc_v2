@@ -33,6 +33,10 @@ HELP = (
 EXPERT_ON = "Mode *expert* activé : réponses techniques, avec articles et conditions. Écrivez *mode simple* pour revenir."
 SIMPLE_ON = "Mode *simple* activé : réponses courtes et expliquées. Écrivez *mode expert* pour des réponses techniques."
 RESET_DONE = "C'est noté, nous repartons de zéro. Quelle est votre question ?"
+DATA_DELETED = (
+    "Vos données ont été supprimées : historique de conversation, préférences, questions enregistrées et compteurs. "
+    "Si vous écrivez de nouveau, une nouvelle conversation commencera."
+)
 TEXT_ONLY = "Je ne traite pour l'instant que les messages écrits. Pouvez-vous écrire votre question ?"
 LIMIT_REACHED = (
     "Vous avez atteint la limite de {limit} questions pour aujourd'hui. Revenez demain, ou contactez le centre "
@@ -63,6 +67,8 @@ def detect_command(text: str) -> str | None:
         return "simple"
     if t in {"nouveau", "nouvelle question", "nouvelle conversation", "reset", "recommencer", "effacer"}:
         return "nouveau"
+    if t in {"supprimer mes donnees", "supprimer mes données", "effacer mes donnees", "supprimer donnees", "stop donnees"}:
+        return "supprimer"
     words = t.split()
     if words and len(words) <= 3 and words[0] in _GREETINGS:
         return "salutation"
@@ -151,6 +157,10 @@ class WhatsAppHandler:
         if command == "nouveau":
             storage.clear_history(user_hash)
             self._reply(msg.wa_id, RESET_DONE)
+            return
+        if command == "supprimer":
+            storage.delete_user_data(user_hash)
+            self._reply(msg.wa_id, DATA_DELETED)
             return
 
         question = msg.text.strip()[:2000]

@@ -9,6 +9,7 @@ Pour chaque exercice visé :
 """
 
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
@@ -24,6 +25,25 @@ from rag_fisc_v2.retrieval.analysis import QueryAnalysis
 log = logging.getLogger(__name__)
 
 LINKED_TYPES = [DocType.LFI.value, DocType.CIRCULAIRE.value, DocType.ARRETE.value]
+
+# Articles à joindre d'office : les centimes additionnels communaux (CAC) s'ajoutent au principal
+# de ces impôts. Sans eux, le modèle donne un taux incomplet (TVA à 17,5 % au lieu de 19,25 %).
+_CAC_ARTICLES = ["C82", "C83"]
+_CAC_TAXES = re.compile(
+    r"\b(tva|taxe sur la valeur ajout[ée]e|is|imp[ôo]t sur les soci[ée]t[ée]s|irpp|imp[ôo]t sur le revenu"
+    r"|droits? d.accises?|accises?)\b",
+    re.IGNORECASE,
+)
+_AMOUNT_OR_RATE = re.compile(r"\b(taux|combien|calcul\w*|montant|payer|total|co[ûu]te?|pourcentage|%)", re.IGNORECASE)
+
+
+def companion_articles(analysis: QueryAnalysis) -> list[str]:
+    """Articles du CGI à fournir d'office pour que la réponse soit complète."""
+    text = f"{analysis.question_reformulee} {' '.join(analysis.impots)}"
+    if _CAC_TAXES.search(text) and _AMOUNT_OR_RATE.search(text):
+        return [a for a in _CAC_ARTICLES if a not in analysis.articles]
+    return []
+
 
 # Borne de sécurité sur la taille du filtre $in (6 articles x 11 variantes = 66 au plus).
 _MAX_FAMILY = 120
@@ -190,6 +210,9 @@ class FiscalRetriever:
             )
         if analysis.intention == "nouveautes":
             queries["nouveautes"] = (s.top_k_dense, {"exercice": year, "type": {"$in": LINKED_TYPES}}, "dense")
+        companions = companion_articles(analysis)
+        if companions and cgi_id:
+            queries["associe"] = (len(companions) * 2, {"doc_id": cgi_id, "article": {"$in": companions}}, "associe")
 
         with ThreadPoolExecutor(max_workers=len(queries)) as pool:
             futures = {
@@ -199,7 +222,9 @@ class FiscalRetriever:
             results = {name: future.result() for name, future in futures.items()}
 
         dense = results["dense"]
-        found: list[Passage] = [p for name in ("article", "lien", "nouveautes") for p in results.get(name, [])]
+        found: list[Passage] = [
+            p for name in ("article", "associe", "lien", "nouveautes") for p in results.get(name, [])
+        ]
         found += dense
 
         # Articles du CGI parmi les meilleurs résultats : on remonte leurs commentaires
@@ -265,6 +290,10 @@ class FiscalRetriever:
             pinned = [p for p in candidates if "article" in p.origins and p.doc_type == DocType.CGI]
             for p in pinned[:3]:
                 p.origins.add("demande")
+                if all(p.node_id != r.node_id for r in ranked):
+                    ranked.append(p)
+            # Articles joints d'office (CAC) : conservés même si le reranker les écarte.
+            for p in [p for p in candidates if "associe" in p.origins][:2]:
                 if all(p.node_id != r.node_id for r in ranked):
                     ranked.append(p)
             selected += ranked

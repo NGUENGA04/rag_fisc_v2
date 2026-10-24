@@ -43,6 +43,14 @@ def _to_source(ref: str, p: Passage, cited: bool) -> Source:
     )
 
 
+def bareme_summary(result: BaremeResult) -> str:
+    """Phrase courte : "Selon le barème mensuel officiel, pour 1 000 000 FCFA : TDL 2 500 FCFA."."""
+    from rag_fisc_v2.ingestion.baremes import fcfa
+
+    values = ", ".join(f"{result.libelles[k]} : {fcfa(v)}" for k, v in result.valeurs.items() if k != "base")
+    return f"Selon le barème mensuel officiel, pour un salaire de {fcfa(result.montant_demande)} : {values}."
+
+
 def _to_calcul(result: BaremeResult) -> CalculBareme:
     return CalculBareme(
         bareme=result.doc_id,
@@ -158,6 +166,10 @@ class RagService:
             question_complete=analysis.question_reformulee,
             usage=usage,
         )
+        if bareme is not None and not bareme.hors_bareme and "B" not in generation.cited:
+            # Le calcul exact du barème doit toujours figurer, même si le modèle a préféré un article.
+            generation.text = f"{bareme_summary(bareme)} [B]\n\n{generation.text}"
+            generation.cited.insert(0, "B")
         sources = [_to_source(ref, p, ref in generation.cited) for ref, p in refs.items()]
         # Les sources citées d'abord, dans l'ordre de citation.
         order = {ref: i for i, ref in enumerate(generation.cited)}

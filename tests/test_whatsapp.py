@@ -300,3 +300,24 @@ def test_inline_mode_auto_on_vercel(monkeypatch):
     assert s.whatsapp_inline is False
     monkeypatch.setenv("VERCEL", "1")
     assert s.whatsapp_inline is True
+
+
+def test_delete_my_data_command():
+    client, service = FakeClient(), FakeService()
+    handler = WhatsAppHandler(service, client)
+    handler.handle(_text("Quel est le taux de l'IS ?", "d1"))
+    user_hash = storage.hash_user("whatsapp:237600000001")
+    assert storage.get_profil(user_hash) is not None
+    assert storage.usage_stats()["questions"] == 1
+    handler.handle(_text("Supprimer mes données", "d2"))
+    assert "supprimées" in client.sent[-1]
+    assert storage.get_profil(user_hash) is None
+    assert storage.usage_stats()["questions"] == 0
+
+
+def test_old_turns_are_purged():
+    import time
+
+    storage.add_turn("u", "q", "r")
+    storage._run("UPDATE turns SET created_at = ?", (time.time() - 2 * 86400,))
+    assert storage.purge_old_turns() == 1

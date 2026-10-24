@@ -108,3 +108,11 @@ questions:
     attendu:
       intention: hors_sujet
     valide: true
+
+  - id: tva-taux-total
+    question: Quel est le taux total de la TVA ?
+    profil: grand_public
+    attendu:
+      articles: ["142", "C83"]
+      contient: ["17,5", "19,25"]
+    valide: true

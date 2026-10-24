@@ -134,5 +134,18 @@ def test_family_query_is_issued_for_top_cgi_articles():
     store = FakeVectorStore()
     r = FiscalRetriever(MANIFEST, vector_store=store, embed_model=FakeEmbed(), reranker=FakeReranker())
     r.retrieve(QueryAnalysis(question_reformulee="taux IS", intention="information"))
-    family_filters = [f for f in store.filters if "article" in f and "doc_id" in f]
-    assert family_filters and "17 bis" in family_filters[0]["article"]["$in"]
+    article_filters = [f["article"]["$in"] for f in store.filters if "article" in f and "doc_id" in f]
+    assert any("17 bis" in values for values in article_filters)
+
+
+def test_cac_articles_joined_for_rate_questions():
+    from rag_fisc_v2.retrieval.retriever import companion_articles
+
+    assert companion_articles(QueryAnalysis(question_reformulee="Quel est le taux de la TVA ?", intention="information")) == ["C82", "C83"]
+    assert companion_articles(
+        QueryAnalysis(question_reformulee="Combien d'impôt sur les sociétés vais-je payer ?", intention="information")
+    ) == ["C82", "C83"]
+    # Pas de taux ni de montant : rien à joindre.
+    assert companion_articles(QueryAnalysis(question_reformulee="Qui doit déclarer la TVA ?", intention="information")) == []
+    # Impôt non soumis aux CAC.
+    assert companion_articles(QueryAnalysis(question_reformulee="Quel est le taux de la patente ?", intention="information")) == []

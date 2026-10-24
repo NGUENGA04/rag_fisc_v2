@@ -75,6 +75,7 @@ secondes de retard.
 | mode expert | Réponses techniques, mémorisé pour ce numéro |
 | mode simple | Réponses courtes et expliquées |
 | nouveau | Oublie la conversation en cours |
+| supprimer mes données | Efface tout ce qui concerne ce numéro : historique, préférences, questions, compteurs |
 
 Après chaque réponse sourcée, deux boutons « Oui » et « Non » recueillent l'avis de l'utilisateur.
 

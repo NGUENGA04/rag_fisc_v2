@@ -128,3 +128,24 @@ def test_service_without_tracking_writes_nothing(monkeypatch):
         AskRequest(question="Quel est le taux de l'IS ?", profil=Profil.EXPERT, conversation_id="z")
     )
     assert storage.usage_stats()["questions"] == 0
+
+
+def test_bareme_result_always_shown(monkeypatch):
+    """Si le modèle ne cite pas le barème, le service ajoute lui-même la ligne exacte."""
+    from rag_fisc_v2.ingestion.baremes import Bareme
+    from rag_fisc_v2.retrieval.analysis import QueryAnalysis
+
+    table = Bareme({
+        "doc_id": "bareme-tdl", "titre": "Barème TDL", "exercice": None, "colonnes": ["base", "tdl"],
+        "libelles": {"base": "Base", "tdl": "Taxe de développement local (TDL)"}, "pas": 250,
+        "lignes": [[999750, 2500], [1000000, 2500]],
+    })
+    analysis = QueryAnalysis(question_reformulee="TDL sur 1 000 000", intention="calcul_bareme", bareme="bareme-tdl", montant=1_000_000)
+    monkeypatch.setattr(rag_module, "analyze_question", lambda q, **k: analysis)
+    monkeypatch.setattr(rag_module, "get_bareme", lambda doc_id: table)
+    monkeypatch.setattr(
+        rag_module, "generate_answer", lambda **k: (Generation(text="La TDL annuelle est de 30 000 FCFA [S1].", cited=["S1"]), {"S1": FakeRetriever().retrieve(None).passages[0]})
+    )
+    response = RagService(manifest=None, retriever=FakeRetriever(), track=False).ask(AskRequest(question="TDL sur 1 000 000 FCFA ?"))
+    assert response.reponse.startswith("Selon le barème mensuel officiel, pour un salaire de 1 000 000 FCFA : Taxe de développement local (TDL) : 2 500 FCFA. [B]")
+    assert "30 000 FCFA" in response.reponse
