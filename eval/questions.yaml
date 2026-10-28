@@ -116,3 +116,11 @@ questions:
       articles: ["142", "C83"]
       contient: ["17,5", "19,25"]
     valide: true
+
+  - id: accises-taux
+    question: Cite tous les 6 taux du droit d'accises
+    profil: expert
+    attendu:
+      articles: ["142"]
+      contient: ["12,5", "30", "super réduit"]
+    valide: true

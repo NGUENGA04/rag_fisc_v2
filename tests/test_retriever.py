@@ -62,8 +62,11 @@ class FakeReranker:
         return passages[:top_n]
 
 
+NO_FETCH = lambda ids: {}  # noqa: E731 — les tests n'appellent jamais Pinecone
+
+
 def _retriever():
-    return FiscalRetriever(MANIFEST, vector_store=FakeVectorStore(), embed_model=FakeEmbed(), reranker=FakeReranker())
+    return FiscalRetriever(MANIFEST, vector_store=FakeVectorStore(), embed_model=FakeEmbed(), reranker=FakeReranker(), fetcher=NO_FETCH)
 
 
 def test_default_year_is_latest():
@@ -114,7 +117,7 @@ def test_requested_article_first_and_scores_not_mixed():
                 p.origins.add("rerank")
             return sorted(passages, key=lambda p: -p.score)[:1]  # l'article 17 n'est pas retenu
 
-    r = FiscalRetriever(MANIFEST, vector_store=FakeVectorStore(), embed_model=FakeEmbed(), reranker=ScoringReranker())
+    r = FiscalRetriever(MANIFEST, vector_store=FakeVectorStore(), embed_model=FakeEmbed(), reranker=ScoringReranker(), fetcher=NO_FETCH)
     result = r.retrieve(QueryAnalysis(question_reformulee="article 17", intention="information", articles=["17"]))
     ids = [p.node_id for p in result.passages]
     assert ids[0] == "cgi-2026#1"  # article demandé, réinséré et placé en tête
@@ -132,7 +135,7 @@ def test_article_family():
 
 def test_family_query_is_issued_for_top_cgi_articles():
     store = FakeVectorStore()
-    r = FiscalRetriever(MANIFEST, vector_store=store, embed_model=FakeEmbed(), reranker=FakeReranker())
+    r = FiscalRetriever(MANIFEST, vector_store=store, embed_model=FakeEmbed(), reranker=FakeReranker(), fetcher=NO_FETCH)
     r.retrieve(QueryAnalysis(question_reformulee="taux IS", intention="information"))
     article_filters = [f["article"]["$in"] for f in store.filters if "article" in f and "doc_id" in f]
     assert any("17 bis" in values for values in article_filters)
@@ -149,3 +152,40 @@ def test_cac_articles_joined_for_rate_questions():
     assert companion_articles(QueryAnalysis(question_reformulee="Qui doit déclarer la TVA ?", intention="information")) == []
     # Impôt non soumis aux CAC.
     assert companion_articles(QueryAnalysis(question_reformulee="Quel est le taux de la patente ?", intention="information")) == []
+
+
+def test_sibling_parts_of_a_split_article_are_joined():
+    """La partie 2 de l'article 142 est retenue : les parties 0 et 1 sont jointes, pas l'article suivant."""
+    from rag_fisc_v2.retrieval.retriever import Passage
+
+    def meta(article, partie, text):
+        node = TextNode(id_="x", text=text, metadata={"doc_id": "cgi-2026", "type": "cgi", "exercice": 2026, "article": article, "partie": partie})
+        from llama_index.core.vector_stores.utils import node_to_metadata_dict
+
+        return node_to_metadata_dict(node)
+
+    store_meta = {
+        "cgi-2026#00245": meta("142", 0, "Article 142.- (1) Taux du droit d'accises : super élevé 50 %"),
+        "cgi-2026#00246": meta("142", 1, "Article 142 (suite) véhicules"),
+        "cgi-2026#00248": meta("143", 0, "Article 143.- autre article"),
+        "cgi-2026#00249": meta("143", 1, "Article 143 (suite)"),
+    }
+    r = FiscalRetriever(MANIFEST, fetcher=lambda ids: {i: store_meta[i] for i in ids if i in store_meta})
+    retained = Passage("cgi-2026#00247", "Article 142 (suite) e) taux élevé", {"doc_id": "cgi-2026", "type": "cgi", "article": "142", "partie": 2}, 0.9, {"rerank"})
+    siblings = r.sibling_parts([retained])
+    assert sorted(p.node_id for p in siblings) == ["cgi-2026#00245", "cgi-2026#00246"]
+    assert all(p.score == 0.9 and "suite" in p.origins for p in siblings)
+
+    ordered = sorted([retained, *siblings], key=FiscalRetriever._final_order)
+    assert [p.node_id for p in ordered] == ["cgi-2026#00245", "cgi-2026#00246", "cgi-2026#00247"]
+
+
+def test_sibling_fetch_failure_is_harmless():
+    from rag_fisc_v2.retrieval.retriever import Passage
+
+    def boom(ids):
+        raise RuntimeError("Pinecone indisponible")
+
+    r = FiscalRetriever(MANIFEST, fetcher=boom)
+    p = Passage("cgi-2026#00010", "x", {"type": "cgi", "article": "7", "partie": 1}, 0.5, {"rerank"})
+    assert r.sibling_parts([p]) == []

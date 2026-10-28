@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 
 from llama_index.core.schema import TextNode
 from llama_index.core.vector_stores.types import VectorStoreQuery
+from llama_index.core.vector_stores.utils import metadata_dict_to_node
 
 from rag_fisc_v2.config import get_settings
 from rag_fisc_v2.domain import DOC_TYPE_AUTHORITY, EXERCICE_NON_DATE, DocType
@@ -104,12 +105,22 @@ class RetrievalResult:
 
 
 class FiscalRetriever:
-    def __init__(self, manifest: Manifest, vector_store=None, embed_model=None, reranker=None):
+    def __init__(self, manifest: Manifest, vector_store=None, embed_model=None, reranker=None, fetcher=None):
         self.manifest = manifest
         self.settings = get_settings()
         self._vector_store = vector_store
         self._embed_model = embed_model
         self._reranker = reranker
+        # fetcher(ids) -> {id: metadata} : lecture de morceaux par identifiant (Pinecone par défaut).
+        self._fetcher = fetcher
+
+    def fetch_metadata(self, ids: list[str]) -> dict[str, dict]:
+        if self._fetcher is not None:
+            return self._fetcher(ids)
+        from rag_fisc_v2.clients import get_pinecone_index
+
+        response = get_pinecone_index().fetch(ids=ids, namespace=self.settings.pinecone_namespace)
+        return {vid: dict(v.metadata or {}) for vid, v in response.vectors.items()}
 
     # --- dépendances paresseuses (permettent les tests sans clé) ------------------
 
@@ -299,20 +310,90 @@ class FiscalRetriever:
             selected += ranked
 
         selected = self.merge(selected)
+        selected = self.merge(selected + self.sibling_parts(selected))
         selected.sort(key=self._final_order)
         return RetrievalResult(passages=selected, exercices=years, avertissements=warnings, reranker=reranker_used)
+
+    # --- morceaux d'une même unité ------------------------------------------------------
+
+    def sibling_parts(self, passages: list[Passage]) -> list[Passage]:
+        """Autres morceaux de l'article (ou de la section) d'un passage retenu.
+
+        Un article long est découpé en morceaux aux identifiants consécutifs, numérotés par
+        `partie` (0, 1, 2...). Sans les autres morceaux, le modèle peut recevoir la fin d'un
+        article sans son début : la liste des taux d'accises de l'article 142 était dans la
+        partie 0, et seule la partie 2 avait été retenue.
+        """
+        s = self.settings
+        present = {p.node_id for p in passages}
+        wanted: dict[str, Passage] = {}  # identifiant voisin -> passage d'origine
+        for p in [p for p in passages if "demande" in p.origins or "rerank" in p.origins][: s.sibling_max_sources]:
+            parsed = _parse_chunk_id(p.node_id)
+            if parsed is None:
+                continue
+            doc_id, n = parsed
+            part = int(p.metadata.get("partie") or 0)
+            before = range(max(0, n - min(part, s.sibling_max_each_side)), n)
+            after = range(n + 1, n + 1 + s.sibling_max_each_side)
+            for i in [*before, *after]:
+                vid = f"{doc_id}#{i:05d}"
+                if vid not in present:
+                    wanted.setdefault(vid, p)
+        if not wanted:
+            return []
+        try:
+            fetched = self.fetch_metadata(list(wanted))
+        except Exception as exc:  # une amélioration : la réponse reste possible sans
+            log.warning("Morceaux voisins indisponibles (%s)", exc)
+            return []
+
+        siblings: list[Passage] = []
+        for vid, origin in wanted.items():
+            meta = fetched.get(vid)
+            if not meta or not _same_unit(origin, vid, meta):
+                continue
+            node = metadata_dict_to_node(meta)
+            siblings.append(
+                Passage(
+                    node_id=vid,
+                    text=node.get_content(),
+                    metadata=dict(node.metadata),
+                    score=origin.score,  # rangé juste à côté du passage d'origine
+                    origins={"suite"} | ({"demande"} if "demande" in origin.origins else set()),
+                    exercice_cible=origin.exercice_cible,
+                )
+            )
+        return siblings[: s.sibling_max_total]
 
     @staticmethod
     def _final_order(p: Passage) -> tuple:
         """Articles demandés d'abord, puis passages reranqués par score, puis le reste.
 
         Les scores du reranker et ceux de la recherche vectorielle n'ont pas la même
-        échelle : on ne les compare jamais entre eux.
+        échelle : on ne les compare jamais entre eux. Les morceaux d'un même article
+        partagent le score du passage retenu et restent dans l'ordre du texte.
         """
         if "demande" in p.origins:
             group = 0
-        elif "rerank" in p.origins:
+        elif "rerank" in p.origins or "suite" in p.origins:
             group = 1
         else:
             group = 2
-        return (group, -p.score, DOC_TYPE_AUTHORITY[p.doc_type])
+        return (group, -p.score, DOC_TYPE_AUTHORITY[p.doc_type], p.node_id)
+
+
+def _parse_chunk_id(node_id: str) -> tuple[str, int] | None:
+    doc_id, sep, number = node_id.rpartition("#")
+    return (doc_id, int(number)) if sep and number.isdigit() else None
+
+
+def _same_unit(origin: Passage, vid: str, meta: dict) -> bool:
+    """Le morceau voisin appartient-il à la même unité (même article, parties consécutives) ?"""
+    parsed_o, parsed_v = _parse_chunk_id(origin.node_id), _parse_chunk_id(vid)
+    if parsed_o is None or parsed_v is None:
+        return False
+    distance = parsed_v[1] - parsed_o[1]
+    part_o = int(origin.metadata.get("partie") or 0)
+    part_v = int(meta.get("partie") or 0)
+    # Les parties d'une unité se suivent : partie(voisin) = partie(origine) + distance.
+    return part_v == part_o + distance and part_v >= 0 and meta.get("article") == origin.metadata.get("article")

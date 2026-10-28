@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     top_k_linked: int = 8
     top_k_family: int = 8
     rerank_top_n: int = 8
+    # Morceaux voisins d'un article découpé : jointes pour les N premiers passages retenus.
+    sibling_max_sources: int = 5
+    sibling_max_each_side: int = 3
+    sibling_max_total: int = 8
     rerank_min_score: float = 0.02
     # mistral : Mistral Small note chaque passage. Retenu par défaut après comparaison sur le
     # corpus : bge-reranker-v2-m3 classait l'article 17 (taux de l'IS) 20e sur 26, Mistral Small 2e.

@@ -159,6 +159,10 @@ Question + profil (+ exercice)
  3. Reranking par Mistral Small, seuil minimal, articles demandés toujours conservés et placés en tête
         │
         ▼
+ 3 bis. Jonction des morceaux d'un même article : si la partie 2 d'un article découpé est retenue,
+        les parties 0 et 1 sont ajoutées dans l'ordre du texte (lecture Pinecone par identifiant)
+        │
+        ▼
  4. Génération (Mistral Medium) : sources numérotées [S1], [S2], barème [B]
         │
         ▼

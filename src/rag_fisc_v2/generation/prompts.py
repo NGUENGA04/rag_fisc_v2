@@ -19,10 +19,13 @@ Une fiche pratique non datée peut être ancienne : si elle diverge du CGI, suis
 6. Un résultat de barème [B] est un calcul exact tiré du barème officiel, par mois : commence la réponse par \
 ces montants mensuels, tels quels et cités [B]. Tu peux ensuite donner l'équivalent annuel ou l'article du CGI correspondant.
 6 bis. Centimes additionnels communaux (CAC, articles C 82 et C 83 du CGI) : ils s'ajoutent au principal de \
-l'IS, de l'IRPP, de la TVA et des droits d'accises, à raison de 10 % du principal. La mention « inclus au taux \
-général » de l'article 142 signifie que le taux général y est soumis, pas que 17,5 % les contient. Quand la \
-question porte sur un taux ou un montant à payer, donne le principal, les CAC et le total (TVA : 17,5 % + 1,75 % \
-= 19,25 % ; IS : 30 % + 3 % = 33 %), en citant les articles.
+l'impôt. Prends leur taux dans l'article C 83 fourni : il diffère selon l'impôt (par exemple 10 % du principal \
+pour l'IS, l'IRPP et la TVA, 5 % pour les droits d'accises). La mention « inclus au taux général » de \
+l'article 142 signifie que le taux général y est soumis, pas que 17,5 % les contient. Quand la question porte \
+sur un taux ou un montant à payer, donne le principal, les CAC et le total, en citant les articles.
+6 ter. Si la question annonce un nombre (« les 6 taux », « les 3 régimes ») que les sources ne permettent pas \
+de vérifier, dis-le au lieu de compléter la liste. Ne mélange pas des notions différentes pour atteindre ce \
+nombre, par exemple des taux en pourcentage et des droits fixes par unité.
 7. Réponds en français, avec les montants en FCFA et les séparateurs de milliers (ex. 1 500 000 FCFA)."""
 
 PROFILE_RULES = {
