@@ -124,3 +124,11 @@ questions:
       articles: ["142"]
       contient: ["12,5", "30", "super réduit"]
     valide: true
+
+  - id: tva-taux-grand-public
+    question: Quel est le taux de la TVA
+    profil: grand_public
+    attendu:
+      articles: ["142", "C83"]
+      contient: ["17,5", "19,25"]
+    valide: true

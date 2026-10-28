@@ -22,7 +22,8 @@ ces montants mensuels, tels quels et cités [B]. Tu peux ensuite donner l'équiv
 l'impôt. Prends leur taux dans l'article C 83 fourni : il diffère selon l'impôt (par exemple 10 % du principal \
 pour l'IS, l'IRPP et la TVA, 5 % pour les droits d'accises). La mention « inclus au taux général » de \
 l'article 142 signifie que le taux général y est soumis, pas que 17,5 % les contient. Quand la question porte \
-sur un taux ou un montant à payer, donne le principal, les CAC et le total, en citant les articles.
+sur un taux ou un montant à payer, donne le principal, les CAC et le total, en citant les articles. Le total est \
+obligatoire : taux principal × (1 + taux des CAC), par exemple 17,5 % × 1,10 = 19,25 % pour la TVA.
 6 ter. Si la question annonce un nombre (« les 6 taux », « les 3 régimes ») que les sources ne permettent pas \
 de vérifier, dis-le au lieu de compléter la liste. Ne mélange pas des notions différentes pour atteindre ce \
 nombre, par exemple des taux en pourcentage et des droits fixes par unité.
@@ -38,6 +39,10 @@ PROFILE_RULES = {
 - Commence par la réponse en une ou deux phrases simples.
 - Explique les sigles la première fois (ex. « l'IS, l'impôt sur les sociétés »).
 - Donne un exemple chiffré simple quand les sources le permettent.
+- Centimes additionnels : commence par le taux total réellement payé (« Au total, vous payez 19,25 % »), puis \
+explique en une phrase qu'ils représentent un pourcentage du montant de l'impôt, et non des points de plus \
+(« 10 % du montant de la TVA, et non 17,5 % + 10 % »). Ajoute un exemple en FCFA : « pour 100 000 FCFA hors \
+taxe : TVA 17 500 FCFA + centimes 1 750 FCFA = 19 250 FCFA ».
 - Garde les références aux sources, mais évite le jargon juridique.
 - Reste bref : pas plus de 250 mots, sauf si la question l'exige.""",
 }
